@@ -1,5 +1,4 @@
 'use strict';
-const optional = require('require-optional');
 
 module.exports = function(grunt) {
     const config = require('./screeps.json');
@@ -14,8 +13,6 @@ module.exports = function(grunt) {
     }
 
     require('load-grunt-tasks')(grunt);
-
-    const reintegrate = optional('./reintegrate.json');
 
     // Override branch in screeps.json
     // grunt deploy --branch=<customBranch>
@@ -52,21 +49,8 @@ module.exports = function(grunt) {
                 files: [{
                     expand: true,
                     cwd: 'src/',
-                    src: '**',
+                    src: ['**', '!example.main.js'],
                     dest: 'dist/',
-                    filter: 'isFile',
-                    rename: function (dest, src) {
-                        // Change the path name. utilize dots for folders
-                        return dest + src.replace(/\//g,'.');
-                    }
-                }]
-            },
-            publish: {
-                files: [{
-                    expand: true,
-                    cwd: 'dist/',
-                    src: '**',
-                    dest: config.publishDir,
                     filter: 'isFile',
                     rename: function (dest, src) {
                         // Change the path name. utilize dots for folders
@@ -90,7 +74,7 @@ module.exports = function(grunt) {
                         loader: 'babel-loader',
                         query: {
                             presets: [
-                                require.resolve('babel-preset-es2015')
+                                require.resolve('babel-preset-es2016')
                             ]
                         }
                     }]
@@ -106,9 +90,6 @@ module.exports = function(grunt) {
                     dest: 'pack'
                 }]
             }
-        },
-        reintegrate: {
-            options: reintegrate,
         },
         deploymentnumber: {
             options: {
@@ -149,90 +130,13 @@ module.exports = function(grunt) {
     grunt.registerTask('default', ['clean', 'copy:src', 'deploymentnumber']);
     // clean deployment
     grunt.registerTask('deploy', ['clean', 'copy:src', 'deploymentnumber', 'screeps']);
-    // clean deployment to directory
-    grunt.registerTask('publish', ['clean', 'copy:src', 'deploymentnumber', 'copy:publish']);
-    // clean deployment (public only)
-    grunt.registerTask('public-deploy', ['clean', 'copy:src', 'deploymentnumber', 'screeps']);
-    // single file [experimental] (dry run)
-    grunt.registerTask('compress', ['clean', 'copy:src', 'webpack']);
-    // single file [experimental]
+    // compressed [experimental] (dry run)
+    grunt.registerTask('compress', ['clean', 'copy:src', 'deploymentnumber', 'webpack']);
+    // compressed [experimental]
     grunt.registerTask('compress-deploy', ['clean', 'copy:src', 'deploymentnumber', 'webpack', 'switch-to-pack-deploy','screeps']);
     // uglified [experimental] (dry run)
-    grunt.registerTask('ugly', ['clean', 'copy:src', 'webpack', 'uglify']);
+    grunt.registerTask('ugly', ['clean', 'copy:src', 'deploymentnumber', 'webpack', 'uglify']);
     // uglified [experimental]
     grunt.registerTask('ugly-deploy', ['clean', 'copy:src', 'deploymentnumber', 'webpack', 'uglify', 'switch-to-pack-deploy', 'screeps']);
-    grunt.registerTask('reintegrate', 'Create a new integration branch with branches configured from reintegrate.json', function(targetBranch, targetOption) {
-        const options = this.options();
-        if (Object.getOwnPropertyNames(options).length === 0) {
-            grunt.fail.fatal("reintegrate requires external config: reintegrate.json");
-            return false;
-        }
 
-        const optionOutput = {
-            gitadd: {},
-            gitcommit: {},
-            gitcheckout: {},
-            gitreset: {},
-            gitmerge: {},
-        };
-
-        let runMerge = false;
-        for (const subdir in options) {
-            optionOutput.gitadd[subdir] = {
-                options: {
-                    cwd: subdir,
-                    all: true,
-                }
-            };
-            optionOutput.gitcommit[subdir] = {
-                options: {
-                    cwd: subdir,
-                    message: 'reintegrate ' + subdir + ' before branching to ' + targetBranch,
-                    allowEmpty: true,
-                }
-            };
-            optionOutput.gitcheckout[subdir] = {
-                options: {
-                    cwd: subdir,
-                    branch: targetBranch,
-                    overwrite: true,
-                }
-            };
-            optionOutput.gitreset[subdir] = {
-                options: {
-                    cwd: subdir,
-                    mode: 'hard',
-                    commit: options[subdir].reset,
-                }
-            };
-
-            if (targetOption !== "clean" && options[subdir].merge) {
-                for (const merge of options[subdir].merge) {
-                    runMerge = true;
-                    const key = subdir + "-" + merge;
-                    optionOutput.gitmerge[key] = {
-                        options: {
-                            cwd: subdir,
-                            branch: merge,
-                        }
-                    }
-                }
-            }
-        }
-
-        for (const task in optionOutput) {
-            grunt.config(task, optionOutput[task]);
-        }
-
-        grunt.task.run([
-            'gitadd', // add loose files
-            'gitcommit', // commit changes
-            'gitcheckout', // create new branch
-            'gitreset', // reset hard to base branch
-        ]);
-
-        if (runMerge) {
-            grunt.task.run(['gitmerge']); // merge features
-        }
-    });
 };

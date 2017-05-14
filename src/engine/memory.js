@@ -9,6 +9,11 @@ global.partition = {};
 let allNames = [];
 let used = [];
 
+function trimName(name){
+    if( name != null && name.length > 10 ) return name.substr(0, 10);
+    return name;
+};
+
 function initialize(raw, index) {
     const name = raw.substr(0,10).trim();
     if( name === '' ) return;
@@ -145,12 +150,15 @@ mod.serialize = function(partition){
 };
 
 mod.get = function(name){
+    name = trimName(name);
     let partition = global.partition[name] || newPartition(name);
     used.push(name);
     return partition;
 };
 
 mod.set = function(name){
+    name = trimName(name);
+
     let partition = global.partition[name];
     if( partition != null && partition.changed === true ){
         log(`Saving memory partition ${partition.name}!`, {

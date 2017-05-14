@@ -6,6 +6,8 @@ pack/
 pub/
 overrides/
 backup/
+src/features/
+!src/features/sample/
 
 ### Dreamweaver template
 # DW Dreamweaver added files
